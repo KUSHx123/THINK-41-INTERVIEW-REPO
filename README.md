@@ -1,4 +1,4 @@
-# THINK-41 Interview Project
+# THINK-41 AI Interview Project
 
 This repository contains the code and resources developed for the THINK-41 interview assignment. The project implements a RESTful API backend using FastAPI to manage customers and orders data, supporting pagination, filtering, and detailed retrieval of customer and order information.
 
