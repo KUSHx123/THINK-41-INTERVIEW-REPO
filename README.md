@@ -129,8 +129,8 @@ api/
 ## Contact
 
 For any queries or feedback, please contact:  
-**Kush Sinha**  
-Email: [Your Email Address]  
+**Kush Raman Sinha**  
+Email: kushsinha960@gmail.com  
 GitHub: [https://github.com/KUSHx123](https://github.com/KUSHx123)
 
 ---
