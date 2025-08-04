@@ -6,15 +6,15 @@ This repository contains the code and resources developed for the THINK-41 inter
 
 ## Features
 
-- REST API built with FastAPI
-- CORS enabled for frontend integration
-- Supports pagination for customer listing
-- Retrieve detailed customer information including order counts
-- Fetch all orders for a specific customer
-- Fetch details for a specific order
-- Data loaded from CSV files (`users.csv` and `orders.csv`)
-- Handles missing values gracefully
-- JSON responses properly encoded
+- REST API built with FastAPI  
+- CORS enabled for frontend integration  
+- Supports pagination for customer listing  
+- Retrieve detailed customer information including order counts  
+- Fetch all orders for a specific customer  
+- Fetch details for a specific order  
+- Data loaded from CSV files (`users.csv` and `orders.csv`)  
+- Handles missing values gracefully  
+- JSON responses properly encoded  
 
 ---
 
@@ -22,8 +22,8 @@ This repository contains the code and resources developed for the THINK-41 inter
 
 ### Prerequisites
 
-- Python 3.10+ (recommended)
-- pip (Python package installer)
+- Python 3.10+ (recommended)  
+- pip (Python package installer)  
 
 ### Installation
 
@@ -32,11 +32,21 @@ This repository contains the code and resources developed for the THINK-41 inter
    ```bash
    git clone https://github.com/KUSHx123/THINK-41-INTERVIEW-REPO.git
    cd THINK-41-INTERVIEW-REPO/api
+Create and activate a virtual environment (optional but recommended):
+
+bash
+Copy
+Edit
 python -m venv venv
 # On Windows
 venv\Scripts\activate
 # On Linux/macOS
 source venv/bin/activate
+Install dependencies:
+
+bash
+Copy
+Edit
 pip install -r requirements.txt
 Running the API Server
 Run the FastAPI server using Uvicorn:
