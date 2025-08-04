@@ -1,10 +1,12 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+from typing import List, Optional
 import pandas as pd
 import os
 
-app = FastAPI()
+app = FastAPI(title="Customer and Orders API")
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -15,38 +17,69 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load customers data
-def load_users_csv():
+# Pydantic models for response schemas
+class Customer(BaseModel):
+    id: int
+    first_name: Optional[str]
+    last_name: Optional[str]
+    email: Optional[str]
+    city: Optional[str]
+    state: Optional[str]
+    created_at: Optional[str]
+
+class CustomerDetail(BaseModel):
+    id: int
+    name: str
+    email: Optional[str]
+    location: Optional[str]
+    created_at: Optional[str]
+    total_orders: int
+
+class Order(BaseModel):
+    order_id: int
+    user_id: int
+    order_date: Optional[str]
+    order_amount: Optional[float]
+    status: Optional[str]
+
+class CustomerOrders(BaseModel):
+    customer_id: int
+    orders: List[Order]
+
+# Utility functions to load data from CSV
+def load_users_csv() -> pd.DataFrame:
     filepath = os.path.join(os.path.dirname(__file__), "users.csv")
-    return pd.read_csv(filepath)
+    df = pd.read_csv(filepath)
+    # Replace NaN with None for JSON serialization
+    return df.where(pd.notna(df), None)
 
-# Load orders data
-def load_orders_csv():
+def load_orders_csv() -> pd.DataFrame:
     filepath = os.path.join(os.path.dirname(__file__), "orders.csv")
-    return pd.read_csv(filepath)
+    df = pd.read_csv(filepath)
+    return df.where(pd.notna(df), None)
 
-# Get paginated list of customers
-@app.get("/customers")
-def get_customers(skip: int = 0, limit: int = 10):
+# API endpoints
+
+@app.get("/customers", response_model=List[Customer])
+def get_customers(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=100)):
     users_df = load_users_csv()
-    users_page = users_df.iloc[skip: skip + limit]
-    
-    users_list = []
+    users_page = users_df.iloc[skip : skip + limit]
+
+    customers = []
     for user in users_page.to_dict(orient="records"):
-        users_list.append({
-            "id": int(user["id"]),
-            "first_name": user["first_name"],
-            "last_name": user["last_name"],
-            "email": user["email"],
-            "city": user["city"],
-            "state": user["state"],
-            "created_at": user["created_at"]
-        })
+        customers.append(Customer(
+            id=int(user["id"]),
+            first_name=user.get("first_name"),
+            last_name=user.get("last_name"),
+            email=user.get("email"),
+            city=user.get("city"),
+            state=user.get("state"),
+            created_at=user.get("created_at")
+        ))
 
-    return jsonable_encoder(users_list)
+    return customers
 
-# Get customer details by ID
-@app.get("/customers/{customer_id}")
+@app.get("/customers/{customer_id}", response_model=CustomerDetail)
 def get_customer(customer_id: int):
     users_df = load_users_csv()
     orders_df = load_orders_csv()
@@ -56,19 +89,18 @@ def get_customer(customer_id: int):
         raise HTTPException(status_code=404, detail="Customer not found")
 
     user = user_row.iloc[0]
-    order_count = int(orders_df[orders_df["user_id"] == customer_id].shape[0])
+    total_orders = int(orders_df[orders_df["user_id"] == customer_id].shape[0])
 
-    return jsonable_encoder({
-        "id": int(user["id"]),
-        "name": f"{user['first_name']} {user['last_name']}",
-        "email": user["email"],
-        "location": f"{user['city']}, {user['state']}",
-        "created_at": user["created_at"],
-        "total_orders": order_count
-    })
+    return CustomerDetail(
+        id=int(user["id"]),
+        name=f"{user['first_name']} {user['last_name']}",
+        email=user.get("email"),
+        location=f"{user.get('city')}, {user.get('state')}" if user.get("city") and user.get("state") else None,
+        created_at=user.get("created_at"),
+        total_orders=total_orders
+    )
 
-# Get all orders for a specific customer
-@app.get("/customers/{customer_id}/orders")
+@app.get("/customers/{customer_id}/orders", response_model=CustomerOrders)
 def get_orders_for_customer(customer_id: int):
     users_df = load_users_csv()
     orders_df = load_orders_csv()
@@ -76,25 +108,30 @@ def get_orders_for_customer(customer_id: int):
     if users_df[users_df["id"] == customer_id].empty:
         raise HTTPException(status_code=404, detail="Customer not found")
 
-    customer_orders = orders_df[orders_df["user_id"] == customer_id]
+    customer_orders_df = orders_df[orders_df["user_id"] == customer_id]
     orders_list = []
 
-    for order in customer_orders.to_dict(orient="records"):
-        orders_list.append({
-            "order_id": int(order["order_id"]),
-            "user_id": int(order["user_id"]),
-            "order_date": order.get("order_date"),
-            "order_amount": float(order.get("order_amount", 0)),
-            "status": order.get("status")
-        })
+    for order in customer_orders_df.to_dict(orient="records"):
+        order_amount = order.get("order_amount")
+        if order_amount is not None:
+            try:
+                order_amount = float(order_amount)
+            except ValueError:
+                order_amount = None
+        orders_list.append(Order(
+            order_id=int(order["order_id"]),
+            user_id=int(order["user_id"]),
+            order_date=order.get("order_date"),
+            order_amount=order_amount,
+            status=order.get("status")
+        ))
 
-    return jsonable_encoder({
-        "customer_id": customer_id,
-        "orders": orders_list
-    })
+    return CustomerOrders(
+        customer_id=customer_id,
+        orders=orders_list
+    )
 
-# Get details for a specific order
-@app.get("/orders/{order_id}")
+@app.get("/orders/{order_id}", response_model=Order)
 def get_order(order_id: int):
     orders_df = load_orders_csv()
     users_df = load_users_csv()
@@ -104,18 +141,21 @@ def get_order(order_id: int):
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = order_row.iloc[0]
-
     user_row = users_df[users_df["id"] == order["user_id"]]
     if user_row.empty:
         raise HTTPException(status_code=404, detail="Customer for this order not found")
 
-    user = user_row.iloc[0]
+    order_amount = order.get("order_amount")
+    if order_amount is not None:
+        try:
+            order_amount = float(order_amount)
+        except ValueError:
+            order_amount = None
 
-    return jsonable_encoder({
-        "order_id": int(order["order_id"]),
-        "user_id": int(order["user_id"]),
-        "customer_name": f"{user['first_name']} {user['last_name']}",
-        "order_date": order.get("order_date"),
-        "order_amount": float(order.get("order_amount", 0)),
-        "status": order.get("status")
-    })
+    return Order(
+        order_id=int(order["order_id"]),
+        user_id=int(order["user_id"]),
+        order_date=order.get("order_date"),
+        order_amount=order_amount,
+        status=order.get("status")
+    )

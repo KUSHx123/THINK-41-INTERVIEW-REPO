@@ -1,0 +1,27 @@
+.app-container {
+  text-align: center;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.customer-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  justify-content: center;
+}
+
+.customer-card {
+  border: 1px solid #ccc;
+  padding: 15px;
+  border-radius: 8px;
+  width: 250px;
+  background-color: #f9f9f9;
+}
+
+.search-bar {
+  margin: 20px;
+  padding: 8px;
+  width: 60%;
+  font-size: 16px;
+}
